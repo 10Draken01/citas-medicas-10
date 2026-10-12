@@ -44,10 +44,7 @@ public class PacienteServiceImpl implements PacienteService{
 
     @Override
     public PacienteResponse registrar(PacienteRequest request) {
-        Paciente paciente = pacienteMapper.requestAEntidad(
-                request,
-                EstadoRegistro.obtenerPorDescripcion(request.estadoRegistro())
-        );
+        Paciente paciente = pacienteMapper.requestAEntidad(request);
 
         pacienteRepository.saveAndFlush(paciente);
 
@@ -59,11 +56,8 @@ public class PacienteServiceImpl implements PacienteService{
     @Override
     public PacienteResponse actualizar(PacienteRequest request, Long id) {
         Paciente paciente = obtenerPaciente(id);
-        EstadoRegistro estadoRegistro = EstadoRegistro.obtenerPorDescripcion(
-                request.estadoRegistro()
-        );
 
-        if(paciente.cambiosEnDatos(
+        paciente.actualizar(
                 request.nombre(),
                 request.apellidoPaterno(),
                 request.apellidoMaterno(),
@@ -72,25 +66,12 @@ public class PacienteServiceImpl implements PacienteService{
                 request.estatura(),
                 request.email(),
                 request.telefono(),
-                request.direccion(),
-                estadoRegistro
-        )){
-            paciente.actualizar(
-                    request.nombre(),
-                    request.apellidoPaterno(),
-                    request.apellidoMaterno(),
-                    request.edad(),
-                    request.peso(),
-                    request.estatura(),
-                    request.email(),
-                    request.telefono(),
-                    request.direccion(),
-                    estadoRegistro
-            );
-            pacienteRepository.saveAndFlush(paciente);
+                request.direccion()
+        );
+        pacienteRepository.saveAndFlush(paciente);
 
-            log.info("Paciente actualizado con id: {}", id);
-        }
+        log.info("Paciente actualizado con id: {}", id);
+
 
         return pacienteMapper.entidadAResponse(paciente);
     }
@@ -99,7 +80,7 @@ public class PacienteServiceImpl implements PacienteService{
     public void eliminar(Long id) {
         Paciente paciente = obtenerPaciente(id);
 
-        paciente.actualizarEstadoRegistro(EstadoRegistro.ELIMINADO);
+        paciente.eliminar();
 
         pacienteRepository.saveAndFlush(paciente);
 
@@ -115,6 +96,7 @@ public class PacienteServiceImpl implements PacienteService{
     }
 
     private Paciente obtenerPacienteActivo(Long id){
+        log.info("Obteniendo paciente activo con id: {}", id);
         return pacienteRepository.findByIdAndEstadoRegistro(
                 id, EstadoRegistro.ACTIVO
         ).orElseThrow(() ->
