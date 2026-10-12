@@ -1,6 +1,7 @@
 package com.draken.pacientes.entities;
 
 import com.draken.commons.enums.EstadoRegistro;
+import com.draken.commons.exceptions.ConflictoException;
 import com.draken.commons.exceptions.DatoInvalidoException;
 import com.draken.commons.utils.StringCustomUtils;
 import com.draken.commons.utils.ValoresNumericosUtils;
@@ -144,19 +145,18 @@ public class Paciente {
             Double estatura,
             String email,
             String telefono,
-            String direccion,
-            EstadoRegistro estadoRegistro
+            String direccion
     ){
         validarDatos(
-                nombre,
-                apellidoPaterno,
-                apellidoMaterno,
+                nombre.trim(),
+                apellidoPaterno.trim(),
+                apellidoMaterno.trim(),
                 edad,
                 peso,
                 estatura,
-                email,
-                telefono,
-                direccion
+                email.trim().toLowerCase(),
+                telefono.trim(),
+                direccion.trim()
         );
 
         return !this.nombre.equals(nombre.trim()) ||
@@ -166,8 +166,7 @@ public class Paciente {
             this.peso != peso ||
             this.estatura != estatura ||
             !this.telefono.equals(telefono.trim()) ||
-            !this.direccion.equals(direccion.trim()) ||
-            !this.estadoRegistro.equals(estadoRegistro);
+            !this.direccion.equals(direccion.trim());
     }
 
     public void actualizar(
@@ -179,19 +178,18 @@ public class Paciente {
             Double estatura,
             String email,
             String telefono,
-            String direccion,
-            EstadoRegistro estadoRegistro
+            String direccion
     ){
         validarDatos(
-                nombre,
-                apellidoPaterno,
-                apellidoMaterno,
+                nombre.trim(),
+                apellidoPaterno.trim(),
+                apellidoMaterno.trim(),
                 edad,
                 peso,
                 estatura,
-                email,
-                telefono,
-                direccion
+                email.trim().toLowerCase(),
+                telefono.trim(),
+                direccion.trim()
         );
 
         this.nombre = nombre.trim();
@@ -205,7 +203,6 @@ public class Paciente {
         this.numExpediente = generarNumeroDeExpediente(telefono.trim());
         this.telefono = telefono.trim();
         this.direccion = direccion.trim();
-        this.estadoRegistro = estadoRegistro;
     }
 
     public void actualizarEstadoRegistro(EstadoRegistro estadoRegistro){
@@ -224,11 +221,15 @@ public class Paciente {
                 .reduce("", String::concat);
     }
 
-    public void asignarEstadoRegistro(EstadoRegistro estadoRegistro){
-        if (estadoRegistro == null)
-            throw new DatoInvalidoException("El estado de registro no puede ser nulo");
+    private void validaNoEliminado(){
+        if (this.estadoRegistro.equals(EstadoRegistro.ELIMINADO))
+            throw new ConflictoException("El medico ya se encuentra eliminado");
+    }
 
-        this.estadoRegistro = estadoRegistro;
+    public void eliminar(){
+        validaNoEliminado();
+
+        this.estadoRegistro = EstadoRegistro.ELIMINADO;
     }
 
     public static Paciente crear(
@@ -243,28 +244,29 @@ public class Paciente {
             String direccion
     ){
         validarDatos(
-                nombre,
-                apellidoPaterno,
-                apellidoMaterno,
+                nombre.trim(),
+                apellidoPaterno.trim(),
+                apellidoMaterno.trim(),
                 edad,
                 peso,
                 estatura,
-                email,
-                telefono,
-                direccion
+                email.trim().toLowerCase(),
+                telefono.trim(),
+                direccion.trim()
         );
         return Paciente.builder()
-                .nombre(nombre)
-                .apellidoPaterno(apellidoPaterno)
-                .apellidoMaterno(apellidoMaterno)
+                .nombre(nombre.trim())
+                .apellidoPaterno(apellidoPaterno.trim())
+                .apellidoMaterno(apellidoMaterno.trim())
                 .edad(edad)
                 .peso(peso)
                 .estatura(estatura)
                 .imc(peso / (estatura * estatura))
-                .email(email)
+                .email(email.trim().toLowerCase())
                 .numExpediente(generarNumeroDeExpediente(telefono.trim()))
-                .telefono(telefono)
-                .direccion(direccion)
+                .telefono(telefono.trim())
+                .direccion(direccion.trim())
+                .estadoRegistro(EstadoRegistro.ACTIVO)
                 .build();
 
     }

@@ -24,11 +24,6 @@ public class PacienteMapper implements CommonMapper<PacienteRequest, PacienteRes
                 request.direccion()
         );
     }
-    public Paciente requestAEntidad(PacienteRequest request, EstadoRegistro estadoRegistro) {
-        Paciente paciente = requestAEntidad(request);
-        paciente.asignarEstadoRegistro(estadoRegistro);
-        return paciente;
-    }
 
     @Override
     public PacienteResponse entidadAResponse(Paciente paciente) {
