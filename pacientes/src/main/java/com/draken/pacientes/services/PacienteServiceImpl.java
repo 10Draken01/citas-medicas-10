@@ -3,6 +3,7 @@ package com.draken.pacientes.services;
 import com.draken.commons.dto.pacientes.PacienteRequest;
 import com.draken.commons.dto.pacientes.PacienteResponse;
 import com.draken.commons.enums.EstadoRegistro;
+import com.draken.commons.exceptions.ConflictoException;
 import com.draken.commons.exceptions.RecursoNoEncontradoException;
 import com.draken.pacientes.entities.Paciente;
 import com.draken.pacientes.mapper.PacienteMapper;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -44,6 +46,8 @@ public class PacienteServiceImpl implements PacienteService{
 
     @Override
     public PacienteResponse registrar(PacienteRequest request) {
+        validarRegistroUnico(request);
+
         Paciente paciente = pacienteMapper.requestAEntidad(request);
 
         pacienteRepository.saveAndFlush(paciente);
@@ -55,6 +59,8 @@ public class PacienteServiceImpl implements PacienteService{
 
     @Override
     public PacienteResponse actualizar(PacienteRequest request, Long id) {
+        validarActualizarUnico(request, id);
+
         Paciente paciente = obtenerPaciente(id);
 
         paciente.actualizar(
@@ -104,5 +110,24 @@ public class PacienteServiceImpl implements PacienteService{
                         "Paciente no encontrado con id: " + id
                 )
         );
+    }
+
+    private void validarRegistroUnico(PacienteRequest request){
+        if(pacienteRepository.existsByEmailIgnoreCaseAndTelefonoAndEstadoRegistro(
+                request.email().toLowerCase(),
+                request.telefono(),
+                EstadoRegistro.ACTIVO
+        ))
+            throw new ConflictoException("Ya existe un paciente registrado con el mismo correo electrónico y número de teléfono");
+    }
+
+    private void validarActualizarUnico(PacienteRequest request, Long id){
+        if(pacienteRepository.existsByEmailIgnoreCaseAndTelefonoAndEstadoRegistroAndIdNot(
+                request.email().toLowerCase(),
+                request.telefono(),
+                EstadoRegistro.ACTIVO,
+                id
+        ))
+            throw new ConflictoException("Ya existe un paciente con el mismo correo electrónico y número de teléfono");
     }
 }
