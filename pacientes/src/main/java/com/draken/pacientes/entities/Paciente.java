@@ -205,13 +205,6 @@ public class Paciente {
         this.direccion = direccion.trim();
     }
 
-    public void actualizarEstadoRegistro(EstadoRegistro estadoRegistro){
-        if(estadoRegistro == null)
-            throw new DatoInvalidoException("El estado de registro no puede ser nulo");
-
-        this.estadoRegistro = estadoRegistro;
-    }
-
     private static String generarNumeroDeExpediente(String telefono){
         // Número de expediente: se genera a partir del teléfono.
         // Según el ejemplo del anexo, cada dígito del teléfono va
