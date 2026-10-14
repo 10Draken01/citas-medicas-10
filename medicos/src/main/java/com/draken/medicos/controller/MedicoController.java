@@ -58,4 +58,15 @@ public class MedicoController extends CrudController<MedicoRequest, MedicoRespon
         service.actualizarDisponibilidadMedico(idMedico, idDisponibilidad);
         return ResponseEntity.noContent().build();
     }
+    @PutMapping("/interno/{idMedico}/disponibilidad/{idDisponibilidad}")
+    @Operation(summary = "Actualizar disponibilidad por cita (uso interno)",
+            description = "Lo usa el servicio de citas para sincronizar la disponibilidad del medico segun el estado de la cita")
+    @ApiResponse(responseCode = "204", description = "Disponibilidad actualizada")
+    public ResponseEntity<Void> actualizarDisponibilidadPorCita(
+            @PathVariable @Positive(message = "El idMedico debe ser positivo") Long idMedico,
+            @PathVariable @Positive(message = "El idDisponibilidad debe ser positivo") Long idDisponibilidad
+    ) {
+        service.actualizarDisponibilidadPorCita(idMedico, idDisponibilidad);
+        return ResponseEntity.noContent().build();
+    }
 }

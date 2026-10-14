@@ -6,17 +6,14 @@ import com.draken.commons.exceptions.DatoInvalidoException;
 import com.draken.commons.utils.StringCustomUtils;
 import com.draken.commons.utils.ValoresNumericosUtils;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "PACIENTES")
-@AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
 @Getter
 public class Paciente {
@@ -136,6 +133,8 @@ public class Paciente {
         );
     }
 
+
+
     public boolean cambiosEnDatos(
             String nombre,
             String apellidoPaterno,
@@ -169,6 +168,10 @@ public class Paciente {
             !this.direccion.equals(direccion.trim());
     }
 
+    public String obtenerNombreCompleto(){
+        return this.nombre + " " + this.apellidoPaterno + " " + this.apellidoMaterno;
+    }
+
     public void actualizar(
             String nombre,
             String apellidoPaterno,
@@ -180,6 +183,7 @@ public class Paciente {
             String telefono,
             String direccion
     ){
+        validaNoEliminado();
         validarDatos(
                 nombre.trim(),
                 apellidoPaterno.trim(),
@@ -216,7 +220,7 @@ public class Paciente {
 
     private void validaNoEliminado(){
         if (this.estadoRegistro.equals(EstadoRegistro.ELIMINADO))
-            throw new ConflictoException("El medico ya se encuentra eliminado");
+            throw new ConflictoException("El paciente ya se encuentra eliminado");
     }
 
     public void eliminar(){

@@ -94,6 +94,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return pd;
     }
 
+    // 503: servicio externo no disponible
+    @ExceptionHandler(ServicioNoDisponibleException.class)
+    public ProblemDetail handleServicioNoDisponible(ServicioNoDisponibleException e) {
+        log.error("Servicio externo no disponible", e);
+        return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE,
+                "Servicio externo no disponible. Contacte al administrador.");
+    }
+
     // ---------- Red de seguridad ----------
 
     // 500: cualquier error que no previmos

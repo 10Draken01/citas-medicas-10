@@ -41,9 +41,7 @@ public class MedicoMapper implements CommonMapper<MedicoRequest, MedicoResponse,
         return medico == null ? null
                 : new MedicoResponse(
                         medico.getId(),
-                        medico.getNombre(),
-                        medico.getApellidoPaterno(),
-                        medico.getApellidoMaterno(),
+                        medico.obtenerNombreCompleto(),
                         medico.getEdad(),
                         medico.getEmail(),
                         medico.getTelefono(),
