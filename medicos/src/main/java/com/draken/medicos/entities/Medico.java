@@ -8,10 +8,7 @@ import com.draken.commons.exceptions.DatoInvalidoException;
 import com.draken.commons.utils.StringCustomUtils;
 import com.draken.commons.utils.ValoresNumericosUtils;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -19,8 +16,8 @@ import java.util.Locale;
 
 @Entity
 @Table(name = "MEDICOS")
-@AllArgsConstructor
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter @Builder
 public class Medico {
     @Id
@@ -90,8 +87,8 @@ public class Medico {
                 "La edad es requerida y debe ser positiva"
         );
         ValoresNumericosUtils.validarRango(
-                edad, 1, 100,
-                "La edad es requerida y debe estar entre 1 y 100 años"
+                edad, 18, 100,
+                "La edad es requerida y debe estar entre 18 y 100 años"
         );
 
         // Validar email
@@ -140,6 +137,10 @@ public class Medico {
                 !this.telefono.equals(telefono.trim()) ||
                 !this.cedulaProfesional.equals(cedulaProfesional.trim()) ||
                 !this.especialidadMedico.equals(especialidadMedico);
+    }
+
+    public String obtenerNombreCompleto(){
+        return this.nombre = this.nombre + " " + this.apellidoPaterno + " " + this.apellidoMaterno;
     }
 
     public void actualizar(

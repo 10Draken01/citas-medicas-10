@@ -1,15 +1,18 @@
 package com.draken.medicos.services;
 
+import com.draken.commons.clients.CitaClient;
 import com.draken.commons.dto.medicos.MedicoRequest;
 import com.draken.commons.dto.medicos.MedicoResponse;
 import com.draken.commons.enums.DisponibilidadMedico;
 import com.draken.commons.enums.EspecialidadMedico;
 import com.draken.commons.enums.EstadoRegistro;
+import com.draken.commons.exceptions.ConflictoException;
 import com.draken.commons.exceptions.RecursoNoEncontradoException;
 import com.draken.medicos.entities.Medico;
 import com.draken.medicos.mapper.MedicoMapper;
 import com.draken.medicos.repositories.MedicoRepository;
 import com.draken.medicos.utils.ServiceUtils;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,6 +27,8 @@ import java.util.List;
 public class MedicoServiceImpl implements MedicoService{
     private final MedicoRepository medicoRepository;
     private final MedicoMapper medicoMapper;
+
+    private final CitaClient citaClient;
 
     @Override
     @Transactional(readOnly = true)
@@ -60,6 +65,8 @@ public class MedicoServiceImpl implements MedicoService{
 
         Medico medico = obtenerMedicoActivo(id);
 
+        validarMedicoEliminableOActualizable(id);
+
         EspecialidadMedico especialidadMedico = EspecialidadMedico.obtenerEspecialidadPorCodigo(
                 request.idEspecialidad()
         );
@@ -85,6 +92,8 @@ public class MedicoServiceImpl implements MedicoService{
     public void eliminar(Long id) {
         Medico medico = obtenerMedicoActivo(id);
 
+        validarMedicoEliminableOActualizable(id);
+
         log.info("Crucificando medico con id: {}", id);
         medico.eliminar();
         medicoRepository.saveAndFlush(medico);
@@ -99,17 +108,33 @@ public class MedicoServiceImpl implements MedicoService{
     @Override
     public void actualizarDisponibilidadMedico(Long id, Long idDisponibilidad) {
         Medico medico = obtenerMedicoActivo(id);
+        validarMedicoEliminableOActualizable(id);
+        asignarDisponibilidad(medico, idDisponibilidad);
+    }
 
-        DisponibilidadMedico disponibilidadMedicoAnterior = medico.getDisponibilidadMedico();
+    @Override
+    public void actualizarDisponibilidadPorCita(Long id, Long idDisponibilidad) {
+        // sin estado: el médico pudo ser eliminado teniendo una cita PENDIENTE
+        asignarDisponibilidad(obtenerMedico(id), idDisponibilidad);
+    }
 
-        DisponibilidadMedico disponibilidadMedico = DisponibilidadMedico
-                .obtenerDisponibilidadPorCodigo(idDisponibilidad);
+    private void asignarDisponibilidad(Medico medico, Long idDisponibilidad) {
+        DisponibilidadMedico anterior = medico.getDisponibilidadMedico();
+        DisponibilidadMedico nueva = DisponibilidadMedico.obtenerDisponibilidadPorCodigo(idDisponibilidad);
 
-        medico.asignarDisponibilidadMedico(disponibilidadMedico);
-
+        medico.asignarDisponibilidadMedico(nueva);
         medicoRepository.saveAndFlush(medico);
 
-        log.info("Disponibilidad del medico con id {} actualizada de {} a {}", id, disponibilidadMedicoAnterior.getDescripcion(), disponibilidadMedico.getDescripcion());
+        log.info("Disponibilidad del medico con id {} actualizada de {} a {}",
+                medico.getId(), anterior.getDescripcion(), nueva.getDescripcion());
+    }
+
+    private void validarMedicoEliminableOActualizable(Long id){
+        try {
+            citaClient.medicoTieneCitaActiva(id);
+        } catch (FeignException.Conflict e){
+            throw new ConflictoException("El medico con id: " + id + " tiene citas activas y no puede ser eliminado o actualizado");
+        }
     }
 
     private Medico obtenerMedico(Long id){
@@ -135,38 +160,38 @@ public class MedicoServiceImpl implements MedicoService{
         if (medicoRepository.existsByEmailIgnoreCaseAndEstadoRegistro(
                 request.email(), EstadoRegistro.ACTIVO
         ))
-            throw new RecursoNoEncontradoException("El email " + request.email() + " ya se encuentra registrado");
+            throw new ConflictoException("El email " + request.email() + " ya se encuentra registrado");
 
         log.info("Validando telefono unico...");
         if (medicoRepository.existsByTelefonoAndEstadoRegistro(
                 request.telefono(), EstadoRegistro.ACTIVO
         ))
-            throw new RecursoNoEncontradoException("El telefono " + request.telefono() + " ya se encuentra registrado");
+            throw new ConflictoException("El telefono " + request.telefono() + " ya se encuentra registrado");
 
         log.info("Validando cedula profesional unica...");
         if (medicoRepository.existsByCedulaProfesionalIgnoreCaseAndEstadoRegistro(
                 request.cedulaProfesional(), EstadoRegistro.ACTIVO
         ))
-            throw new RecursoNoEncontradoException("La cedula profesional " + request.cedulaProfesional() + " ya se encuentra registrada");
+            throw new ConflictoException("La cedula profesional " + request.cedulaProfesional() + " ya se encuentra registrada");
     }
 
     private void validarCambiosUnico(MedicoRequest request, Long id){
-        log.info("Validando email unico...");
+        log.info("Validando email unico para actualizar...");
         if (medicoRepository.existsByEmailIgnoreCaseAndEstadoRegistroAndIdNot(
                 request.email(), EstadoRegistro.ACTIVO, id
         ))
-            throw new RecursoNoEncontradoException("El email " + request.email() + " ya se encuentra registrado");
+            throw new ConflictoException("El email " + request.email() + " ya se encuentra registrado");
 
-        log.info("Validando telefono unico...");
+        log.info("Validando telefono unico para actualizar...");
         if (medicoRepository.existsByTelefonoAndEstadoRegistroAndIdNot(
                 request.telefono(), EstadoRegistro.ACTIVO, id
         ))
-            throw new RecursoNoEncontradoException("El telefono " + request.telefono() + " ya se encuentra registrado");
+            throw new ConflictoException("El telefono " + request.telefono() + " ya se encuentra registrado");
 
-        log.info("Validando cedula profesional unica...");
+        log.info("Validando cedula profesional unica para actualizar...");
         if (medicoRepository.existsByCedulaProfesionalIgnoreCaseAndEstadoRegistroAndIdNot(
                 request.cedulaProfesional(), EstadoRegistro.ACTIVO, id
         ))
-            throw new RecursoNoEncontradoException("La cedula profesional " + request.cedulaProfesional() + " ya se encuentra registrada");
+            throw new ConflictoException("La cedula profesional " + request.cedulaProfesional() + " ya se encuentra registrada");
     }
 }

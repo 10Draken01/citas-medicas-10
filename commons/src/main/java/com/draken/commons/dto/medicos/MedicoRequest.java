@@ -21,7 +21,7 @@ public record   MedicoRequest(
         String apellidoMaterno,
 
         @Schema(description = "La edad del medico", example = "20")
-        @Min(value = 1, message = "La edad debe ser mayor a 0")
+        @Min(value = 18, message = "La edad debe ser mayor a 18 años")
         @Max(value = 100, message = "La edad debe ser menor a 100 años")
         short edad,
 

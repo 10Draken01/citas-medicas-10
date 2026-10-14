@@ -1,5 +1,6 @@
 package com.draken.pacientes.services;
 
+import com.draken.commons.clients.CitaClient;
 import com.draken.commons.dto.pacientes.PacienteRequest;
 import com.draken.commons.dto.pacientes.PacienteResponse;
 import com.draken.commons.enums.EstadoRegistro;
@@ -9,6 +10,7 @@ import com.draken.pacientes.entities.Paciente;
 import com.draken.pacientes.mapper.PacienteMapper;
 import com.draken.pacientes.repositories.PacienteRepository;
 import com.draken.pacientes.utils.ServiceUtils;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,8 @@ public class PacienteServiceImpl implements PacienteService{
     private final PacienteRepository pacienteRepository;
     private final PacienteMapper pacienteMapper;
 
+    private final CitaClient citaClient;
+
     @Override
     @Transactional(readOnly = true)
     public List<PacienteResponse> listar() {
@@ -40,7 +44,7 @@ public class PacienteServiceImpl implements PacienteService{
     }
 
     @Override
-    public PacienteResponse obtenerPacientePorId(Long id) {
+    public PacienteResponse obtenerPorIdSinEstado(Long id) {
         return pacienteMapper.entidadAResponse(obtenerPaciente(id));
     }
 
@@ -61,7 +65,9 @@ public class PacienteServiceImpl implements PacienteService{
     public PacienteResponse actualizar(PacienteRequest request, Long id) {
         validarActualizarUnico(request, id);
 
-        Paciente paciente = obtenerPaciente(id);
+        Paciente paciente = obtenerPacienteActivo(id);
+
+        validarPacienteEliminableOActualizable(id);
 
         paciente.actualizar(
                 request.nombre(),
@@ -84,13 +90,23 @@ public class PacienteServiceImpl implements PacienteService{
 
     @Override
     public void eliminar(Long id) {
-        Paciente paciente = obtenerPaciente(id);
+        Paciente paciente = obtenerPacienteActivo(id);
+
+        validarPacienteEliminableOActualizable(id);
 
         paciente.eliminar();
 
         pacienteRepository.saveAndFlush(paciente);
 
         log.info("Paciente eliminado con id:{}", id);
+    }
+
+    private void validarPacienteEliminableOActualizable(Long id){
+        try {
+            citaClient.pacienteTieneCitaActiva(id);
+        } catch (FeignException.Conflict e){
+            throw new ConflictoException("El paciente con id: " + id + " tiene citas activas y no puede ser eliminado o actualizado");
+        }
     }
 
     private Paciente obtenerPaciente(Long id){
@@ -113,7 +129,7 @@ public class PacienteServiceImpl implements PacienteService{
     }
 
     private void validarRegistroUnico(PacienteRequest request){
-        if(pacienteRepository.existsByEmailIgnoreCaseAndTelefonoAndEstadoRegistro(
+        if(pacienteRepository.existsByEmailIgnoreCaseOrTelefonoAndEstadoRegistro(
                 request.email().toLowerCase(),
                 request.telefono(),
                 EstadoRegistro.ACTIVO
@@ -122,7 +138,7 @@ public class PacienteServiceImpl implements PacienteService{
     }
 
     private void validarActualizarUnico(PacienteRequest request, Long id){
-        if(pacienteRepository.existsByEmailIgnoreCaseAndTelefonoAndEstadoRegistroAndIdNot(
+        if(pacienteRepository.existsByEmailIgnoreCaseOrTelefonoAndEstadoRegistroAndIdNot(
                 request.email().toLowerCase(),
                 request.telefono(),
                 EstadoRegistro.ACTIVO,

@@ -8,4 +8,6 @@ public interface MedicoService extends CrudService<MedicoRequest, MedicoResponse
     MedicoResponse obtenerMedicoPorIdSinEstado(Long id);
 
     void actualizarDisponibilidadMedico(Long id, Long idDisponibilidad);
+
+    void actualizarDisponibilidadPorCita(Long id, Long idDisponibilidad);
 }
