@@ -91,23 +91,25 @@ public class CitaServiceImpl implements CitaService{
 
         // Obtener cita
         Cita cita = obtenerCita(id);
-        // Se valida que la cita sea valida para actualizar
-        cita.validarActualizacionPermitida();   // 409 si está eliminada, FINALIZADA o CANCELADA
-        // Se valida que la cita no esté en curso
-        if (cita.getEstadoCita() == EstadoCita.EN_CURSO)
-            throw new ConflictoException("No se puede actualizar la cita con id: " + id + " porque esta en curso");
 
         // Obtenemos estado de cambio de medico y paciente
         boolean cambioMedico = !cita.getIdMedico().equals(request.idMedico());
         boolean cambioPaciente = !cita.getIdPaciente().equals(request.idPaciente());
 
         Long idMedico = cambioMedico
-                ? cita.getIdMedico()
-                : request.idMedico();
+                ? request.idMedico()
+                : cita.getIdMedico();
 
-        Long idPaciente = cita.getIdPaciente().equals(request.idPaciente())
-                ? cita.getIdPaciente()
-                : request.idPaciente();
+        Long idPaciente = cambioPaciente
+                ? request.idPaciente()
+                : cita.getIdPaciente();
+
+        // Se valida que la cita sea valida para actualizar
+        cita.actualizar(idPaciente, idMedico, request.fechaCita(), request.sintomas());   // 409 si está eliminada, FINALIZADA o CANCELADA
+
+        // Se valida que la cita no esté en curso
+        if (cita.getEstadoCita() == EstadoCita.EN_CURSO)
+            throw new ConflictoException("No se puede actualizar la cita con id: " + id + " porque esta en curso");
 
         MedicoResponse medico = obtenerMedico(idMedico);
         if (cambioMedico)
@@ -116,8 +118,6 @@ public class CitaServiceImpl implements CitaService{
         PacienteResponse paciente = obtenerPacienteActivo(idPaciente);
         if (cambioPaciente)
             validarPacienteNoTengaCitasActivas(paciente.id());
-
-        cita.actualizar(idPaciente, idMedico, request.fechaCita(), request.sintomas());
         citaRepository.saveAndFlush(cita);
 
         // al final: si algo falla arriba, no se tocó ningún médico
