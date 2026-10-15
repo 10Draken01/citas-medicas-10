@@ -122,7 +122,7 @@ public class CitaServiceImpl implements CitaService{
 
         // al final: si algo falla arriba, no se tocó ningún médico
         if (cambioMedico){
-            actualizarDisponibilidadMedico(idMedico, DisponibilidadMedico.DISPONIBLE.getCodigo());
+            actualizarDisponibilidadMedico(request.idMedico(), DisponibilidadMedico.DISPONIBLE.getCodigo());
             actualizarDisponibilidadMedico(idMedico, DisponibilidadMedico.NO_DISPONIBLE.getCodigo());
         }
 
